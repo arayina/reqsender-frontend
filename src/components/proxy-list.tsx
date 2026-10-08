@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { deleteProxy, type ProxyItem } from "@/lib/api";
+import { deleteProxy, updateProxy, type ProxyItem } from "@/lib/api";
 
 import { ProxyForm } from "@/components/proxy-form";
 
@@ -32,7 +32,7 @@ export function ProxyList({ initialProxies }: Props) {
   const [proxies, setProxies] = useState(initialProxies);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-
+  const [editingProxy, setEditingProxy] = useState<ProxyItem | null>(null);
   async function handleDelete(id: string) {
     setDeletingId(id);
 
@@ -54,7 +54,7 @@ export function ProxyList({ initialProxies }: Props) {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogTrigger asChild>
+          <DialogTrigger>
             <Button>+ Add Proxy</Button>
           </DialogTrigger>
 
@@ -69,6 +69,38 @@ export function ProxyList({ initialProxies }: Props) {
             />
           </DialogContent>
         </Dialog>
+        <Dialog
+          open={Boolean(editingProxy)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingProxy(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit Proxy</DialogTitle>
+            </DialogHeader>
+
+            {editingProxy && (
+              <ProxyForm
+                proxy={editingProxy}
+                onSaved={(updatedProxy) => {
+                  setProxies((current) =>
+                    current.map((item) =>
+                      item.id === updatedProxy.id ? updatedProxy : item,
+                    ),
+                  );
+
+                  setEditingProxy(null);
+                }}
+                onCancel={() => {
+                  setEditingProxy(null);
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="rounded-lg border">
@@ -80,7 +112,7 @@ export function ProxyList({ initialProxies }: Props) {
               <TableHead>Protocol</TableHead>
               <TableHead>Username</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -101,15 +133,47 @@ export function ProxyList({ initialProxies }: Props) {
                   </Badge>
                 </TableCell>
 
-                <TableCell className="text-right">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={deletingId === proxy.id}
-                    onClick={() => handleDelete(proxy.id)}
-                  >
-                    {deletingId === proxy.id ? "Deleting..." : "Delete"}
-                  </Button>
+                
+                
+                <TableCell className="text-center">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingProxy(proxy);
+                      }}
+                    >
+                      Edit
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        const updated = await updateProxy(proxy.id, {
+                          enabled: !proxy.enabled,
+                        });
+
+                        setProxies((current) =>
+                          current.map((item) =>
+                            item.id === updated.id ? updated : item,
+                          ),
+                        );
+                      }}
+                    >
+                      {proxy.enabled ? "Disable" : "Enable"}
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={deletingId === proxy.id}
+                      onClick={() => handleDelete(proxy.id)}
+                    >
+                      {deletingId === proxy.id ? "Deleting..." : "Delete"}
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

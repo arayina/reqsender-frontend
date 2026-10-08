@@ -2,61 +2,106 @@
 
 import { FormEvent, useState } from "react";
 
-import { createProxy, type ProxyItem } from "@/lib/api";
+import {
+  createProxy,
+  updateProxy,
+  type ProxyItem,
+} from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type Props = {
-  onCreated: (proxy: ProxyItem) => void;
+  proxy?: ProxyItem;
+  onSaved: (proxy: ProxyItem) => void;
   onCancel: () => void;
 };
 
-export function ProxyForm({ onCreated, onCancel }: Props) {
-  const [host, setHost] = useState("");
-  const [port, setPort] = useState("");
-  const [protocol, setProtocol] = useState("http");
-  const [username, setUsername] = useState("");
+export function ProxyForm({
+  proxy,
+  onSaved,
+  onCancel,
+}: Props) {
+  const isEdit = Boolean(proxy);
+
+  const [host, setHost] = useState(proxy?.host ?? "");
+  const [port, setPort] = useState(
+    proxy?.port?.toString() ?? "",
+  );
+  const [protocol, setProtocol] = useState(
+    proxy?.protocol ?? "http",
+  );
+  const [username, setUsername] = useState(
+    proxy?.username ?? "",
+  );
   const [password, setPassword] = useState("");
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(
+    proxy?.enabled ?? true,
+  );
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     setError("");
     setLoading(true);
 
     try {
-      const proxy = await createProxy({
-        host,
-        port: Number(port),
-        protocol,
-        username: username || undefined,
-        password: password || undefined,
-        enabled,
-      });
+      let savedProxy: ProxyItem;
 
-      onCreated(proxy);
+      if (isEdit && proxy) {
+        savedProxy = await updateProxy(proxy.id, {
+          host,
+          port: Number(port),
+          protocol,
+          username: username || undefined,
+          ...(password
+            ? { password }
+            : {}),
+          enabled,
+        });
+      } else {
+        savedProxy = await createProxy({
+          host,
+          port: Number(port),
+          protocol,
+          username: username || undefined,
+          password: password || undefined,
+          enabled,
+        });
+      }
+
+      onSaved(savedProxy);
     } catch {
-      setError("Failed to create proxy");
+      setError(
+        isEdit
+          ? "Failed to update proxy"
+          : "Failed to create proxy",
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-5"
+    >
       <div className="space-y-2">
         <Label htmlFor="host">Host</Label>
 
         <Input
           id="host"
           value={host}
-          onChange={(event) => setHost(event.target.value)}
+          onChange={(event) =>
+            setHost(event.target.value)
+          }
           placeholder="127.0.0.1"
           required
         />
@@ -71,19 +116,25 @@ export function ProxyForm({ onCreated, onCancel }: Props) {
           min={1}
           max={65535}
           value={port}
-          onChange={(event) => setPort(event.target.value)}
+          onChange={(event) =>
+            setPort(event.target.value)
+          }
           placeholder="8080"
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="protocol">Protocol</Label>
+        <Label htmlFor="protocol">
+          Protocol
+        </Label>
 
         <select
           id="protocol"
           value={protocol}
-          onChange={(event) => setProtocol(event.target.value)}
+          onChange={(event) =>
+            setProtocol(event.target.value)
+          }
           className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
         >
           <option value="http">HTTP</option>
@@ -93,25 +144,37 @@ export function ProxyForm({ onCreated, onCancel }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
+        <Label htmlFor="username">
+          Username
+        </Label>
 
         <Input
           id="username"
           value={username}
-          onChange={(event) => setUsername(event.target.value)}
+          onChange={(event) =>
+            setUsername(event.target.value)
+          }
           placeholder="Optional"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">
+          Password
+        </Label>
 
         <Input
           id="password"
           type="password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Optional"
+          onChange={(event) =>
+            setPassword(event.target.value)
+          }
+          placeholder={
+            isEdit
+              ? "Leave empty to keep current password"
+              : "Optional"
+          }
         />
       </div>
 
@@ -119,12 +182,19 @@ export function ProxyForm({ onCreated, onCancel }: Props) {
         <input
           type="checkbox"
           checked={enabled}
-          onChange={(event) => setEnabled(event.target.checked)}
+          onChange={(event) =>
+            setEnabled(event.target.checked)
+          }
         />
+
         Enabled
       </label>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
 
       <div className="flex justify-end gap-2">
         <Button
@@ -136,8 +206,15 @@ export function ProxyForm({ onCreated, onCancel }: Props) {
           Cancel
         </Button>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? "Creating..." : "Add Proxy"}
+        <Button
+          type="submit"
+          disabled={loading}
+        >
+          {loading
+            ? "Saving..."
+            : isEdit
+              ? "Save Changes"
+              : "Add Proxy"}
         </Button>
       </div>
     </form>

@@ -22,6 +22,15 @@ export type ProxyCreate = {
   enabled: boolean;
 };
 
+export type ProxyUpdate = {
+  host?: string;
+  port?: number;
+  protocol?: string;
+  username?: string;
+  password?: string;
+  enabled?: boolean;
+};
+
 export async function getProxies(): Promise<ProxyItem[]> {
   const response = await fetch(`${API_URL}/api/v1/proxies`, {
     cache: "no-store",
@@ -60,4 +69,26 @@ export async function deleteProxy(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to delete proxy");
   }
+}
+
+export async function updateProxy(
+  id: string,
+  data: ProxyUpdate,
+): Promise<ProxyItem> {
+  const response = await fetch(
+    `${API_URL}/api/v1/proxies/${id}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to update proxy");
+  }
+
+  return response.json();
 }
