@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
-  executeBatchRequest,
-  type BatchRequestResult,
+  executeBatchRequestStream,
+  type BatchProgressEvent,
   type ProxyItem,
   type RequestMode,
+  type RequestResult,
   type TargetUrl,
 } from "@/lib/api";
 
@@ -19,34 +20,45 @@ type Props = {
 };
 
 export function RequestPanel({ urls, proxies }: Props) {
-  const [selectedUrl, setSelectedUrl] = useState(
-    urls[0]?.id ?? "",
-  );
+  const [selectedUrl, setSelectedUrl] = useState(urls[0]?.id ?? "");
 
   const [mode, setMode] = useState<RequestMode>("http");
 
-  const [connection, setConnection] = useState<
-    "direct" | "proxy"
-  >("direct");
+  const [connection, setConnection] = useState<"direct" | "proxy">("direct");
 
   const [selectedProxy, setSelectedProxy] = useState(
     proxies.find((proxy) => proxy.enabled)?.id ?? "",
   );
 
   const [count, setCount] = useState(1);
+
   const [concurrency, setConcurrency] = useState(1);
 
   const [loading, setLoading] = useState(false);
 
-  const [batchResult, setBatchResult] =
-    useState<BatchRequestResult | null>(null);
+  const [total, setTotal] = useState(0);
+
+  const [completed, setCompleted] = useState(0);
+
+  const [success, setSuccess] = useState(0);
+
+  const [failed, setFailed] = useState(0);
+
+  const [results, setResults] = useState<
+    Array<{
+      index: number;
+      result: RequestResult;
+    }>
+  >([]);
 
   const [error, setError] = useState("");
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
   async function handleExecute() {
-    const target = urls.find(
-      (item) => item.id === selectedUrl,
-    );
+    const target = urls.find((item) => item.id === selectedUrl);
 
     if (!target) {
       setError("Please select a URL");
@@ -75,71 +87,119 @@ export function RequestPanel({ urls, proxies }: Props) {
 
     setLoading(true);
     setError("");
-    setBatchResult(null);
+
+    setTotal(count);
+    setCompleted(0);
+    setSuccess(0);
+    setFailed(0);
+    setResults([]);
+
+    const controller = new AbortController();
+
+    abortControllerRef.current = controller;
 
     try {
-      const response = await executeBatchRequest({
-        url: target.url,
-        proxy_id:
-          connection === "direct"
-            ? null
-            : selectedProxy,
-        mode,
-        count,
-        concurrency,
-      });
+      await executeBatchRequestStream(
+        {
+          url: target.url,
+          proxy_id: connection === "direct" ? null : selectedProxy,
+          mode,
+          count,
+          concurrency,
+        },
 
-      setBatchResult(response);
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Batch request failed",
+        (event: BatchProgressEvent) => {
+          if (event.type === "started") {
+            setTotal(event.total);
+            setCompleted(event.completed);
+            setSuccess(event.success);
+            setFailed(event.failed);
+
+            return;
+          }
+
+          if (event.type === "progress") {
+            setCompleted(event.completed);
+
+            setSuccess(event.success);
+
+            setFailed(event.failed);
+
+            setResults((current) => [
+              ...current,
+              {
+                index: event.index,
+                result: event.result,
+              },
+            ]);
+
+            return;
+          }
+
+          if (event.type === "completed") {
+            setTotal(event.total);
+            setCompleted(event.completed);
+            setSuccess(event.success);
+            setFailed(event.failed);
+
+            return;
+          }
+
+          if (event.type === "error") {
+            setError(event.error);
+          }
+        },
+        controller.signal,
       );
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setError("Execution cancelled");
+      } else {
+        setError(
+          error instanceof Error ? error.message : "Batch execution failed",
+        );
+      }
     } finally {
       setLoading(false);
+
+      abortControllerRef.current = null;
     }
+  }
+
+  function handleCancel() {
+    abortControllerRef.current?.abort();
+
+    setLoading(false);
   }
 
   return (
     <section className="space-y-6 rounded-lg border p-6">
-      {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold">
-          Execute Request
-        </h2>
+        <h2 className="text-xl font-semibold">Execute Request</h2>
 
         <p className="text-sm text-muted-foreground">
-          Send one or multiple requests using HTTP,
-          Browser, or Random execution.
+          Send one or multiple requests using HTTP, Browser, or Random
+          execution.
         </p>
       </div>
 
       {/* URL */}
+
       <div className="space-y-2">
-        <Label htmlFor="request-url">
-          URL
-        </Label>
+        <Label htmlFor="request-url">URL</Label>
 
         <select
           id="request-url"
           value={selectedUrl}
-          onChange={(event) =>
-            setSelectedUrl(event.target.value)
-          }
+          onChange={(event) => setSelectedUrl(event.target.value)}
           className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
         >
-          <option value="">
-            Select URL
-          </option>
+          <option value="">Select URL</option>
 
           {urls
             .filter((item) => item.enabled)
             .map((item) => (
-              <option
-                key={item.id}
-                value={item.id}
-              >
+              <option key={item.id} value={item.id}>
                 {item.name || item.url}
               </option>
             ))}
@@ -147,103 +207,72 @@ export function RequestPanel({ urls, proxies }: Props) {
       </div>
 
       {/* Connection */}
+
       <div className="space-y-2">
-        <Label htmlFor="request-connection">
-          Connection
-        </Label>
+        <Label htmlFor="request-connection">Connection</Label>
 
         <select
           id="request-connection"
           value={connection}
           onChange={(event) =>
-            setConnection(
-              event.target.value as
-                | "direct"
-                | "proxy",
-            )
+            setConnection(event.target.value as "direct" | "proxy")
           }
           className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
         >
-          <option value="direct">
-            Direct
-          </option>
+          <option value="direct">Direct</option>
 
-          <option value="proxy">
-            Proxy
-          </option>
+          <option value="proxy">Proxy</option>
         </select>
       </div>
 
       {/* Proxy */}
+
       {connection === "proxy" && (
         <div className="space-y-2">
-          <Label htmlFor="request-proxy">
-            Proxy
-          </Label>
+          <Label htmlFor="request-proxy">Proxy</Label>
 
           <select
             id="request-proxy"
             value={selectedProxy}
-            onChange={(event) =>
-              setSelectedProxy(event.target.value)
-            }
+            onChange={(event) => setSelectedProxy(event.target.value)}
             className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
           >
-            <option value="">
-              Select Proxy
-            </option>
+            <option value="">Select Proxy</option>
 
             {proxies
               .filter((proxy) => proxy.enabled)
               .map((proxy) => (
-                <option
-                  key={proxy.id}
-                  value={proxy.id}
-                >
-                  {proxy.host}:{proxy.port} (
-                  {proxy.protocol.toUpperCase()}
-                  )
+                <option key={proxy.id} value={proxy.id}>
+                  {proxy.host}:{proxy.port} ({proxy.protocol.toUpperCase()})
                 </option>
               ))}
           </select>
         </div>
       )}
 
-      {/* Execution Mode */}
+      {/* Mode */}
+
       <div className="space-y-2">
-        <Label htmlFor="request-mode">
-          Execution Mode
-        </Label>
+        <Label htmlFor="request-mode">Execution Mode</Label>
 
         <select
           id="request-mode"
           value={mode}
-          onChange={(event) =>
-            setMode(
-              event.target.value as RequestMode,
-            )
-          }
+          onChange={(event) => setMode(event.target.value as RequestMode)}
           className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
         >
-          <option value="http">
-            HTTP
-          </option>
+          <option value="http">HTTP</option>
 
-          <option value="browser">
-            Browser
-          </option>
+          <option value="browser">Browser</option>
 
-          <option value="random">
-            Random
-          </option>
+          <option value="random">Random</option>
         </select>
       </div>
 
       {/* Count */}
+
       <div className="space-y-2">
-        <Label htmlFor="request-count">
-          Count
-        </Label>
+        <Label htmlFor="request-count">Count</Label>
 
         <input
           id="request-count"
@@ -251,9 +280,7 @@ export function RequestPanel({ urls, proxies }: Props) {
           min={1}
           max={100}
           value={count}
-          onChange={(event) =>
-            setCount(Number(event.target.value))
-          }
+          onChange={(event) => setCount(Number(event.target.value))}
           className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
         />
 
@@ -263,10 +290,9 @@ export function RequestPanel({ urls, proxies }: Props) {
       </div>
 
       {/* Concurrency */}
+
       <div className="space-y-2">
-        <Label htmlFor="request-concurrency">
-          Concurrency
-        </Label>
+        <Label htmlFor="request-concurrency">Concurrency</Label>
 
         <input
           id="request-concurrency"
@@ -274,144 +300,131 @@ export function RequestPanel({ urls, proxies }: Props) {
           min={1}
           max={20}
           value={concurrency}
-          onChange={(event) =>
-            setConcurrency(
-              Number(event.target.value),
-            )
-          }
+          onChange={(event) => setConcurrency(Number(event.target.value))}
           className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
         />
 
         <p className="text-xs text-muted-foreground">
-          Maximum number of requests running at
-          the same time. Maximum: 20.
+          Maximum number of requests running at the same time. Maximum: 20.
         </p>
       </div>
 
-      {/* Execute */}
-      <Button
-        onClick={handleExecute}
-        disabled={loading}
-      >
-        {loading
-          ? "Sending..."
-          : "Send Requests"}
-      </Button>
+      {/* Actions */}
+
+      <div className="flex gap-2">
+        <Button onClick={handleExecute} disabled={loading}>
+          {loading ? "Executing..." : "Start Execution"}
+        </Button>
+
+        {loading && (
+          <Button variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+        )}
+      </div>
 
       {/* Error */}
+
       {error && (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {/* Result */}
-      {batchResult && (
+      {/* Progress */}
+
+      {total > 0 && (
         <div className="space-y-4 rounded-md border p-4">
-          <h3 className="font-semibold">
-            Batch Result
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">Execution Progress</h3>
 
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <span>Total</span>
-            <span>
-              {batchResult.total}
-            </span>
+            <span className="text-sm font-medium">{progress}%</span>
+          </div>
 
-            <span>Success</span>
-            <span>
-              {batchResult.success}
-            </span>
+          <div className="h-3 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{
+                width: `${progress}%`,
+              }}
+            />
+          </div>
 
-            <span>Failed</span>
-            <span>
-              {batchResult.failed}
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">Completed</p>
+
+              <p className="text-lg font-semibold">
+                {completed} / {total}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-muted-foreground">Success</p>
+
+              <p className="text-lg font-semibold">{success}</p>
+            </div>
+
+            <div>
+              <p className="text-muted-foreground">Failed</p>
+
+              <p className="text-lg font-semibold">{failed}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Results */}
+
+      {results.length > 0 && (
+        <div className="space-y-4 rounded-md border p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">Results</h3>
+
+            <span className="text-sm text-muted-foreground">
+              {results.length} completed
             </span>
           </div>
 
-          {/* Individual Results */}
-          {batchResult.results.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">
-                Requests
-              </h4>
+          <div className="max-h-96 space-y-2 overflow-y-auto">
+            {[...results].reverse().map(({ index, result }) => (
+              <div key={index} className="rounded-md border p-3 text-sm">
+                <div className="grid grid-cols-2 gap-2">
+                  <span>Request</span>
 
-              <div className="max-h-80 space-y-2 overflow-y-auto">
-                {batchResult.results.map(
-                  (result, index) => (
-                    <div
-                      key={index}
-                      className="rounded-md border p-3 text-sm"
-                    >
-                      <div className="grid grid-cols-2 gap-2">
-                        <span>
-                          Request
-                        </span>
+                  <span>#{index}</span>
 
-                        <span>
-                          #{index + 1}
-                        </span>
+                  <span>Success</span>
 
-                        <span>
-                          Success
-                        </span>
+                  <span>{result.success ? "Yes" : "No"}</span>
 
-                        <span>
-                          {result.success
-                            ? "Yes"
-                            : "No"}
-                        </span>
+                  <span>Status</span>
 
-                        <span>
-                          Status
-                        </span>
+                  <span>{result.status_code ?? "-"}</span>
 
-                        <span>
-                          {result.status_code ??
-                            "-"}
-                        </span>
+                  <span>Latency</span>
 
-                        <span>
-                          Latency
-                        </span>
+                  <span>{result.latency_ms} ms</span>
 
-                        <span>
-                          {result.latency_ms} ms
-                        </span>
+                  <span>Final URL</span>
 
-                        <span>
-                          Final URL
-                        </span>
+                  <span className="break-all">{result.final_url ?? "-"}</span>
 
-                        <span className="break-all">
-                          {result.final_url ??
-                            "-"}
-                        </span>
+                  {result.title && (
+                    <>
+                      <span>Title</span>
 
-                        {result.title && (
-                          <>
-                            <span>
-                              Title
-                            </span>
+                      <span>{result.title}</span>
+                    </>
+                  )}
+                </div>
 
-                            <span>
-                              {result.title}
-                            </span>
-                          </>
-                        )}
-                      </div>
-
-                      {result.error && (
-                        <p className="mt-2 text-destructive">
-                          {result.error}
-                        </p>
-                      )}
-                    </div>
-                  ),
+                {result.error && (
+                  <p className="mt-2 text-destructive">{result.error}</p>
                 )}
               </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       )}
     </section>

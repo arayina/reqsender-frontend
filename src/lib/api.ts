@@ -243,3 +243,119 @@ export async function executeBatchRequest(
 
   return result;
 }
+
+export type BatchProgressEvent =
+  | {
+      type: "started";
+      total: number;
+      success: number;
+      failed: number;
+      completed: number;
+    }
+  | {
+      type: "progress";
+      index: number;
+      completed: number;
+      total: number;
+      success: number;
+      failed: number;
+      result: RequestResult;
+    }
+  | {
+      type: "completed";
+      total: number;
+      success: number;
+      failed: number;
+      completed: number;
+    }
+  | {
+      type: "error";
+      error: string;
+    };
+
+export async function executeBatchRequestStream(
+  data: BatchRequestExecution,
+  onEvent: (event: BatchProgressEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/api/v1/requests/batch/stream`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      signal,
+    },
+  );
+
+  if (!response.ok) {
+    const result = await response.json();
+
+    throw new Error(
+      result.detail || "Batch stream failed",
+    );
+  }
+
+  if (!response.body) {
+    throw new Error(
+      "Response body is not available",
+    );
+  }
+
+  const reader = response.body.getReader();
+
+  const decoder = new TextDecoder();
+
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { value, done } =
+        await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(
+        value,
+        { stream: true },
+      );
+
+      const events = buffer.split("\n\n");
+
+      buffer = events.pop() ?? "";
+
+      for (const event of events) {
+        const line = event
+          .split("\n")
+          .find((line) =>
+            line.startsWith("data:"),
+          );
+
+        if (!line) {
+          continue;
+        }
+
+        const json = line
+          .slice(5)
+          .trim();
+
+        if (!json) {
+          continue;
+        }
+
+        const parsed =
+          JSON.parse(
+            json,
+          ) as BatchProgressEvent;
+
+        onEvent(parsed);
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
