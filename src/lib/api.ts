@@ -1,0 +1,63 @@
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+if (!API_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL is not configured");
+}
+
+export type ProxyItem = {
+  id: string;
+  host: string;
+  port: number;
+  protocol: string;
+  username: string | null;
+  enabled: boolean;
+};
+
+export type ProxyCreate = {
+  host: string;
+  port: number;
+  protocol: string;
+  username?: string;
+  password?: string;
+  enabled: boolean;
+};
+
+export async function getProxies(): Promise<ProxyItem[]> {
+  const response = await fetch(`${API_URL}/api/v1/proxies`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch proxies");
+  }
+
+  return response.json();
+}
+
+export async function createProxy(
+  data: ProxyCreate,
+): Promise<ProxyItem> {
+  const response = await fetch(`${API_URL}/api/v1/proxies`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create proxy");
+  }
+
+  return response.json();
+}
+
+export async function deleteProxy(id: string): Promise<void> {
+  const response = await fetch(`${API_URL}/api/v1/proxies/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete proxy");
+  }
+}
