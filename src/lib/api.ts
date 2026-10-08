@@ -58,6 +58,21 @@ export type RequestExecution = {
   mode: RequestMode;
 };
 
+export type BatchRequestResult = {
+  total: number;
+  success: number;
+  failed: number;
+  results: RequestResult[];
+};
+
+export type BatchRequestExecution = {
+  url: string;
+  proxy_id: string | null;
+  mode: RequestMode;
+  count: number;
+  concurrency: number;
+};
+
 export type RequestResult = {
   success: boolean;
   status_code: number | null;
@@ -201,6 +216,29 @@ export async function executeRequest(
 
   if (!response.ok) {
     throw new Error(result.detail || "Request failed");
+  }
+
+  return result;
+}
+
+export async function executeBatchRequest(
+  data: BatchRequestExecution,
+): Promise<BatchRequestResult> {
+  const response = await fetch(
+    `${API_URL}/api/v1/requests/batch`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    },
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || "Batch request failed");
   }
 
   return result;
