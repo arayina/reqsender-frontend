@@ -50,10 +50,12 @@ export type TargetUrlUpdate = {
   enabled?: boolean;
 };
 
+export type RequestMode = "http" | "browser" | "random";
 
 export type RequestExecution = {
   url: string;
   proxy_id: string | null;
+  mode: RequestMode;
 };
 
 export type RequestResult = {
@@ -61,9 +63,9 @@ export type RequestResult = {
   status_code: number | null;
   latency_ms: number;
   final_url: string | null;
+  title: string | null;
   error: string | null;
 };
-
 
 export async function getProxies(): Promise<ProxyItem[]> {
   const response = await fetch(`${API_URL}/api/v1/proxies`, {

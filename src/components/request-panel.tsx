@@ -7,6 +7,7 @@ import {
   type ProxyItem,
   type RequestResult,
   type TargetUrl,
+  type RequestMode,
 } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
@@ -19,14 +20,12 @@ type Props = {
 
 export function RequestPanel({ urls, proxies }: Props) {
   const [selectedUrl, setSelectedUrl] = useState(urls[0]?.id ?? "");
-
+  const [mode, setMode] = useState<RequestMode>("http");
   const [connection, setConnection] = useState<"direct" | "proxy">("direct");
 
   const [selectedProxy, setSelectedProxy] = useState(
     proxies.find((proxy) => proxy.enabled)?.id ?? "",
   );
-
-  const [mode, setMode] = useState<"http" | "browser" | "random">("http");
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RequestResult | null>(null);
@@ -52,7 +51,8 @@ export function RequestPanel({ urls, proxies }: Props) {
     try {
       const response = await executeRequest({
         url: target.url,
-        proxy_id: connection === "proxy" ? selectedProxy : null,
+        proxy_id: connection === "direct" ? null : selectedProxy,
+        mode,
       });
 
       setResult(response);
@@ -137,23 +137,13 @@ export function RequestPanel({ urls, proxies }: Props) {
 
         <select
           value={mode}
-          onChange={(event) =>
-            setMode(event.target.value as "http" | "browser" | "random")
-          }
+          onChange={(event) => setMode(event.target.value as RequestMode)}
           className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
         >
           <option value="http">HTTP</option>
-
           <option value="browser">Browser</option>
-
           <option value="random">Random</option>
         </select>
-
-        {mode !== "http" && (
-          <p className="text-xs text-muted-foreground">
-            Browser execution will be enabled in the next step.
-          </p>
-        )}
       </div>
 
       <Button onClick={handleExecute} disabled={loading}>
@@ -169,7 +159,12 @@ export function RequestPanel({ urls, proxies }: Props) {
       {result && (
         <div className="rounded-md border p-4 space-y-2">
           <h3 className="font-semibold">Result</h3>
-
+          {result.title && (
+            <>
+              <span>Title</span>
+              <span>{result.title}</span>
+            </>
+          )}
           <div className="grid grid-cols-2 gap-2 text-sm">
             <span>Success</span>
             <span>{result.success ? "Yes" : "No"}</span>
