@@ -71,13 +71,18 @@ export async function createProxy(data: ProxyCreate): Promise<ProxyItem> {
     body: JSON.stringify(data),
   });
 
+  console.log("CREATE PROXY STATUS:", response.status);
+
+  const responseText = await response.text();
+
+  console.log("CREATE PROXY RESPONSE:", responseText);
+
   if (!response.ok) {
     throw new Error("Failed to create proxy");
   }
 
-  return response.json();
+  return JSON.parse(responseText);
 }
-
 export async function deleteProxy(id: string): Promise<void> {
   const response = await fetch(`${API_URL}/api/v1/proxies/${id}`, {
     method: "DELETE",

@@ -64,7 +64,7 @@ export function ProxyList({ initialProxies }: Props) {
             </DialogHeader>
 
             <ProxyForm
-              onCreated={handleCreated}
+              onSaved={handleCreated}
               onCancel={() => setAddOpen(false)}
             />
           </DialogContent>
@@ -133,8 +133,6 @@ export function ProxyList({ initialProxies }: Props) {
                   </Badge>
                 </TableCell>
 
-                
-                
                 <TableCell className="text-center">
                   <div className="flex justify-end gap-2">
                     <Button
