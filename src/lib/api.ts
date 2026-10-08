@@ -224,16 +224,13 @@ export async function executeRequest(
 export async function executeBatchRequest(
   data: BatchRequestExecution,
 ): Promise<BatchRequestResult> {
-  const response = await fetch(
-    `${API_URL}/api/v1/requests/batch`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
+  const response = await fetch(`${API_URL}/api/v1/requests/batch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify(data),
+  });
 
   const result = await response.json();
 
@@ -243,6 +240,12 @@ export async function executeBatchRequest(
 
   return result;
 }
+export type BatchMetrics = {
+  elapsed_ms: number;
+  average_latency_ms: number;
+  requests_per_second: number;
+  success_rate: number;
+};
 
 export type BatchProgressEvent =
   | {
@@ -251,6 +254,7 @@ export type BatchProgressEvent =
       success: number;
       failed: number;
       completed: number;
+      metrics: BatchMetrics;
     }
   | {
       type: "progress";
@@ -260,6 +264,7 @@ export type BatchProgressEvent =
       success: number;
       failed: number;
       result: RequestResult;
+      metrics: BatchMetrics;
     }
   | {
       type: "completed";
@@ -267,6 +272,7 @@ export type BatchProgressEvent =
       success: number;
       failed: number;
       completed: number;
+      metrics: BatchMetrics;
     }
   | {
       type: "error";
@@ -278,30 +284,23 @@ export async function executeBatchRequestStream(
   onEvent: (event: BatchProgressEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const response = await fetch(
-    `${API_URL}/api/v1/requests/batch/stream`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-      signal,
+  const response = await fetch(`${API_URL}/api/v1/requests/batch/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify(data),
+    signal,
+  });
 
   if (!response.ok) {
     const result = await response.json();
 
-    throw new Error(
-      result.detail || "Batch stream failed",
-    );
+    throw new Error(result.detail || "Batch stream failed");
   }
 
   if (!response.body) {
-    throw new Error(
-      "Response body is not available",
-    );
+    throw new Error("Response body is not available");
   }
 
   const reader = response.body.getReader();
@@ -312,45 +311,32 @@ export async function executeBatchRequestStream(
 
   try {
     while (true) {
-      const { value, done } =
-        await reader.read();
+      const { value, done } = await reader.read();
 
       if (done) {
         break;
       }
 
-      buffer += decoder.decode(
-        value,
-        { stream: true },
-      );
+      buffer += decoder.decode(value, { stream: true });
 
       const events = buffer.split("\n\n");
 
       buffer = events.pop() ?? "";
 
       for (const event of events) {
-        const line = event
-          .split("\n")
-          .find((line) =>
-            line.startsWith("data:"),
-          );
+        const line = event.split("\n").find((line) => line.startsWith("data:"));
 
         if (!line) {
           continue;
         }
 
-        const json = line
-          .slice(5)
-          .trim();
+        const json = line.slice(5).trim();
 
         if (!json) {
           continue;
         }
 
-        const parsed =
-          JSON.parse(
-            json,
-          ) as BatchProgressEvent;
+        const parsed = JSON.parse(json) as BatchProgressEvent;
 
         onEvent(parsed);
       }

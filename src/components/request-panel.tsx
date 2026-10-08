@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import {
   executeBatchRequestStream,
+  type BatchMetrics,
   type BatchProgressEvent,
   type ProxyItem,
   type RequestMode,
@@ -43,6 +44,13 @@ export function RequestPanel({ urls, proxies }: Props) {
   const [success, setSuccess] = useState(0);
 
   const [failed, setFailed] = useState(0);
+
+  const [metrics, setMetrics] = useState<BatchMetrics>({
+    elapsed_ms: 0,
+    average_latency_ms: 0,
+    requests_per_second: 0,
+    success_rate: 0,
+  });
 
   const [results, setResults] = useState<
     Array<{
@@ -94,6 +102,13 @@ export function RequestPanel({ urls, proxies }: Props) {
     setFailed(0);
     setResults([]);
 
+    setMetrics({
+      elapsed_ms: 0,
+      average_latency_ms: 0,
+      requests_per_second: 0,
+      success_rate: 0,
+    });
+
     const controller = new AbortController();
 
     abortControllerRef.current = controller;
@@ -114,16 +129,16 @@ export function RequestPanel({ urls, proxies }: Props) {
             setCompleted(event.completed);
             setSuccess(event.success);
             setFailed(event.failed);
+            setMetrics(event.metrics);
 
             return;
           }
 
           if (event.type === "progress") {
             setCompleted(event.completed);
-
             setSuccess(event.success);
-
             setFailed(event.failed);
+            setMetrics(event.metrics);
 
             setResults((current) => [
               ...current,
@@ -141,6 +156,7 @@ export function RequestPanel({ urls, proxies }: Props) {
             setCompleted(event.completed);
             setSuccess(event.success);
             setFailed(event.failed);
+            setMetrics(event.metrics);
 
             return;
           }
@@ -369,6 +385,40 @@ export function RequestPanel({ urls, proxies }: Props) {
               <p className="text-muted-foreground">Failed</p>
 
               <p className="text-lg font-semibold">{failed}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t pt-4 text-sm md:grid-cols-4">
+              <div>
+                <p className="text-muted-foreground">Elapsed</p>
+
+                <p className="font-semibold">
+                  {(metrics.elapsed_ms / 1000).toFixed(2)}s
+                </p>
+              </div>
+
+              <div>
+                <p className="text-muted-foreground">Avg Latency</p>
+
+                <p className="font-semibold">
+                  {metrics.average_latency_ms.toFixed(0)} ms
+                </p>
+              </div>
+
+              <div>
+                <p className="text-muted-foreground">Requests/sec</p>
+
+                <p className="font-semibold">
+                  {metrics.requests_per_second.toFixed(2)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-muted-foreground">Success Rate</p>
+
+                <p className="font-semibold">
+                  {metrics.success_rate.toFixed(1)}%
+                </p>
+              </div>
             </div>
           </div>
         </div>
