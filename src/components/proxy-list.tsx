@@ -54,8 +54,8 @@ export function ProxyList({ initialProxies }: Props) {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogTrigger>
-            <Button>+ Add Proxy</Button>
+          <DialogTrigger className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+            + Add Proxy
           </DialogTrigger>
 
           <DialogContent className="sm:max-w-[500px]">

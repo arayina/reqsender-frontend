@@ -50,6 +50,21 @@ export type TargetUrlUpdate = {
   enabled?: boolean;
 };
 
+
+export type RequestExecution = {
+  url: string;
+  proxy_id: string | null;
+};
+
+export type RequestResult = {
+  success: boolean;
+  status_code: number | null;
+  latency_ms: number;
+  final_url: string | null;
+  error: string | null;
+};
+
+
 export async function getProxies(): Promise<ProxyItem[]> {
   const response = await fetch(`${API_URL}/api/v1/proxies`, {
     cache: "no-store",
@@ -167,4 +182,24 @@ export async function deleteUrl(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to delete URL");
   }
+}
+
+export async function executeRequest(
+  data: RequestExecution,
+): Promise<RequestResult> {
+  const response = await fetch(`${API_URL}/api/v1/requests`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || "Request failed");
+  }
+
+  return result;
 }
