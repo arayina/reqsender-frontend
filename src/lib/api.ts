@@ -76,12 +76,25 @@ export type ProxyStrategy = "fixed" | "round_robin" | "random";
 
 export type BrowserSettings = {
   show_browser: boolean;
+
   delay_before_navigation_ms: number;
+
   wait_after_load_ms: number;
+
+  wait_for_selector_enabled: boolean;
+
+  wait_for_selector: string | null;
+
+  wait_for_selector_timeout_ms: number;
+
   scroll_enabled: boolean;
+
   scroll_amount: number;
+
   wait_after_scroll_ms: number;
+
   delay_after_navigation_ms: number;
+
   navigation_timeout_ms: number;
 };
 
