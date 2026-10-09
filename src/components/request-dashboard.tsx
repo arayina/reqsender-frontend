@@ -840,7 +840,7 @@ export function RequestDashboard() {
 
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="truncate text-sm font-medium">
+                            <p dir="auto" className="truncate text-sm font-medium">
                               {urlItem.name || "Unnamed URL"}
                             </p>
 
@@ -933,7 +933,7 @@ export function RequestDashboard() {
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-semibold">
+                        <h2 dir="auto" className="text-lg font-semibold">
                           {selectedUrl?.name || "Select a target"}
                         </h2>
 
@@ -1609,7 +1609,7 @@ export function RequestDashboard() {
                                   }`}
                                 />
 
-                                <h3 className="truncate font-semibold">
+                                <h3 dir="auto" className="truncate font-semibold">
                                   {execution.urlName}
                                 </h3>
                               </div>
@@ -1873,9 +1873,10 @@ export function RequestDashboard() {
 
                 <Input
                   id="new-url-name"
+                  dir="auto"
                   value={urlName}
                   onChange={(event) => setUrlName(event.target.value)}
-                  placeholder="GitHub"
+                  placeholder="مثلاً: فروشگاه دیجی‌کالا"
                 />
               </div>
 
