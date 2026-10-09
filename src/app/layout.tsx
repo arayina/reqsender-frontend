@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Estedad, Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Readex_Pro } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,10 +12,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const estedad = Estedad({
-  variable: "--font-estedad",
+const readexPro = Readex_Pro({
+  variable: "--font-readex-pro",
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         " " +
         geistMono.variable +
         " " +
-        estedad.variable +
+        readexPro.variable +
         " h-full antialiased"
       }
     >
