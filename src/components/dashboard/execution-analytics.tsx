@@ -39,12 +39,12 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
-function proxyLabel(proxy: ProxyItem | null) {
-  if (!proxy) {
-    return "Direct connection";
+function proxyLabel(proxy: ProxyItem | null, proxyId: string | null = null) {
+  if (proxy) {
+    return `${proxy.host}:${proxy.port}`;
   }
 
-  return `${proxy.host}:${proxy.port}`;
+  return proxyId ? `Proxy unavailable · ${proxyId.slice(0, 8)}` : "Direct connection";
 }
 
 export function ExecutionAnalytics({
@@ -119,6 +119,7 @@ export function ExecutionAnalytics({
         return {
           target: item.url,
           proxy,
+          proxyId: summary.proxy_id,
           mode: summary.execution_mode,
           total: summary.total,
           success: summary.success,
@@ -162,7 +163,7 @@ export function ExecutionAnalytics({
       const key = row.proxy?.id ?? "direct";
       const current = grouped.get(key) ?? {
         key,
-        label: proxyLabel(row.proxy),
+        label: proxyLabel(row.proxy, row.proxyId),
         total: 0,
         success: 0,
         failed: 0,
@@ -424,7 +425,7 @@ export function ExecutionAnalytics({
                   </td>
                   <td className="px-5 py-3">
                     <span className="font-mono text-xs">
-                      {proxyLabel(row.proxy)}
+                      {proxyLabel(row.proxy, row.proxyId)}
                     </span>
                   </td>
                   <td className="px-5 py-3">
