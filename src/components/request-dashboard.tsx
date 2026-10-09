@@ -32,6 +32,7 @@ import { AppHeader } from "@/components/dashboard/app-header";
 import { WorkspaceNav } from "@/components/dashboard/workspace-nav";
 import { DashboardError } from "@/components/dashboard/dashboard-error";
 import { ExecutionAnalytics } from "@/components/dashboard/execution-analytics";
+import { ExecutionAnalytics } from "@/components/dashboard/execution-analytics";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
