@@ -262,11 +262,14 @@ export function RequestDashboard() {
   }
 
   useEffect(() => {
+    const timers = saveTimers.current;
+
     return () => {
-      for (const timer of saveTimers.current.values()) {
+      for (const timer of timers.values()) {
         clearTimeout(timer);
       }
-      saveTimers.current.clear();
+
+      timers.clear();
     };
   }, []);
 
@@ -506,7 +509,7 @@ export function RequestDashboard() {
     }
 
     const executionId = crypto.randomUUID();
-    
+
     /**
      * Snapshot the selected URL configuration.
      *
