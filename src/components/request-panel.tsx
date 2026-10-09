@@ -119,13 +119,23 @@ export function RequestPanel({ urls, proxies }: Props) {
     try {
       await executeBatchRequestStream(
         {
+          target_url_id: target.id,
           url: target.url,
           proxy_ids: connection === "direct" ? [] : selectedProxyIds,
-
           proxy_strategy: connection === "direct" ? "fixed" : proxyStrategy,
           mode,
           count,
           concurrency,
+          browser_settings: {
+            show_browser: false,
+            delay_before_navigation_ms: 0,
+            wait_after_load_ms: 3000,
+            scroll_enabled: true,
+            scroll_amount: 800,
+            wait_after_scroll_ms: 2000,
+            delay_after_navigation_ms: 0,
+            navigation_timeout_ms: 30000,
+          },
         },
 
         (event: BatchProgressEvent) => {
