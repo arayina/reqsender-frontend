@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import {
   executeBatchRequestStream,
+  ProxyStrategy,
   type BatchMetrics,
   type BatchProgressEvent,
   type ProxyItem,
@@ -27,9 +28,10 @@ export function RequestPanel({ urls, proxies }: Props) {
 
   const [connection, setConnection] = useState<"direct" | "proxy">("direct");
 
-  const [selectedProxy, setSelectedProxy] = useState(
-    proxies.find((proxy) => proxy.enabled)?.id ?? "",
-  );
+  const [selectedProxyIds, setSelectedProxyIds] = useState<string[]>([]);
+
+  const [proxyStrategy, setProxyStrategy] =
+    useState<ProxyStrategy>("round_robin");
 
   const [count, setCount] = useState(1);
 
@@ -55,6 +57,7 @@ export function RequestPanel({ urls, proxies }: Props) {
   const [results, setResults] = useState<
     Array<{
       index: number;
+      proxyId: string | null;
       result: RequestResult;
     }>
   >([]);
@@ -73,11 +76,11 @@ export function RequestPanel({ urls, proxies }: Props) {
       return;
     }
 
-    if (connection === "proxy" && !selectedProxy) {
-      setError("Please select a proxy");
+    if (connection === "proxy" && selectedProxyIds.length === 0) {
+      setError("Please select at least one proxy");
+
       return;
     }
-
     if (count < 1 || count > 100) {
       setError("Count must be between 1 and 100");
       return;
@@ -117,7 +120,9 @@ export function RequestPanel({ urls, proxies }: Props) {
       await executeBatchRequestStream(
         {
           url: target.url,
-          proxy_id: connection === "direct" ? null : selectedProxy,
+          proxy_ids: connection === "direct" ? [] : selectedProxyIds,
+
+          proxy_strategy: connection === "direct" ? "fixed" : proxyStrategy,
           mode,
           count,
           concurrency,
@@ -144,6 +149,7 @@ export function RequestPanel({ urls, proxies }: Props) {
               ...current,
               {
                 index: event.index,
+                proxyId: event.proxy_id,
                 result: event.result,
               },
             ]);
@@ -244,25 +250,75 @@ export function RequestPanel({ urls, proxies }: Props) {
       {/* Proxy */}
 
       {connection === "proxy" && (
-        <div className="space-y-2">
-          <Label htmlFor="request-proxy">Proxy</Label>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="proxy-strategy">Proxy Strategy</Label>
 
-          <select
-            id="request-proxy"
-            value={selectedProxy}
-            onChange={(event) => setSelectedProxy(event.target.value)}
-            className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
-          >
-            <option value="">Select Proxy</option>
+            <select
+              id="proxy-strategy"
+              value={proxyStrategy}
+              onChange={(event) =>
+                setProxyStrategy(event.target.value as ProxyStrategy)
+              }
+              className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="round_robin">Round Robin</option>
 
-            {proxies
-              .filter((proxy) => proxy.enabled)
-              .map((proxy) => (
-                <option key={proxy.id} value={proxy.id}>
-                  {proxy.host}:{proxy.port} ({proxy.protocol.toUpperCase()})
-                </option>
-              ))}
-          </select>
+              <option value="random">Random</option>
+
+              <option value="fixed">Fixed</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Proxy Pool</Label>
+
+            <div className="space-y-2 rounded-md border p-3">
+              {proxies
+                .filter((proxy) => proxy.enabled)
+                .map((proxy) => {
+                  const checked = selectedProxyIds.includes(proxy.id);
+
+                  return (
+                    <label
+                      key={proxy.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-md p-2 hover:bg-muted"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(event) => {
+                          if (event.target.checked) {
+                            setSelectedProxyIds((current) => [
+                              ...current,
+                              proxy.id,
+                            ]);
+                          } else {
+                            setSelectedProxyIds((current) =>
+                              current.filter((id) => id !== proxy.id),
+                            );
+                          }
+                        }}
+                      />
+
+                      <span className="text-sm">
+                        {proxy.host}:{proxy.port}
+                      </span>
+
+                      <span className="text-xs text-muted-foreground">
+                        {proxy.protocol.toUpperCase()}
+                      </span>
+                    </label>
+                  );
+                })}
+
+              {proxies.filter((proxy) => proxy.enabled).length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No enabled proxies available.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -437,11 +493,13 @@ export function RequestPanel({ urls, proxies }: Props) {
           </div>
 
           <div className="max-h-96 space-y-2 overflow-y-auto">
-            {[...results].reverse().map(({ index, result }) => (
+            {[...results].reverse().map(({ index, proxyId, result }) => (
               <div key={index} className="rounded-md border p-3 text-sm">
                 <div className="grid grid-cols-2 gap-2">
                   <span>Request</span>
+                  <span>Proxy</span>
 
+                  <span className="break-all">{proxyId ?? "Direct"}</span>
                   <span>#{index}</span>
 
                   <span>Success</span>
