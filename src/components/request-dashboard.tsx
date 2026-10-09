@@ -28,6 +28,9 @@ import {
 } from "@/lib/api";
 
 import { ProxyList } from "@/components/proxy-list";
+import { AppHeader } from "@/components/dashboard/app-header";
+import { WorkspaceNav } from "@/components/dashboard/workspace-nav";
+import { DashboardError } from "@/components/dashboard/dashboard-error";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -755,94 +758,16 @@ export function RequestDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-[1500px] p-4 md:p-6">
-        {/* Header */}
+    <div className="dashboard-shell">
+      <div className="dashboard-frame flex min-h-screen flex-col px-4 py-4 md:px-6 md:py-5">
+        <AppHeader
+          runningCount={executions.filter((item) => item.status === "running").length}
+          onRefresh={() => { void refreshData(); }}
+        />
 
-        <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                <Zap className="size-5" />
-              </div>
+        <WorkspaceNav activeView={activeView} onViewChange={setActiveView} />
 
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">
-                  URL Request Sender
-                </h1>
-
-                <p className="text-sm text-muted-foreground">
-                  Execute HTTP and Browser requests across multiple targets and
-                  proxies.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs">
-              <span className="size-2 rounded-full bg-emerald-500" />
-
-              <span>
-                {executions.filter((item) => item.status === "running").length}{" "}
-                running
-              </span>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                void refreshData();
-              }}
-            >
-              <RefreshCw />
-              Refresh
-            </Button>
-          </div>
-        </header>
-
-        <div className="mb-5 flex items-center gap-2 rounded-xl border bg-card p-1">
-          <button
-            type="button"
-            onClick={() => setActiveView("requests")}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeView === "requests"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            Requests
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveView("proxies")}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeView === "proxies"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            Proxies
-          </button>
-        </div>
-
-        {/* Error */}
-
-        {error && (
-          <div className="mb-5 flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-            <span>{error}</span>
-
-            <button
-              type="button"
-              onClick={() => setError("")}
-              className="rounded p-1 hover:bg-destructive/10"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        )}
+        <DashboardError message={error} onClose={() => setError("")} />
 
         {activeView === "proxies" ? (
           <section className="rounded-2xl border bg-card p-5">
