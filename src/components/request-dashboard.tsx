@@ -17,12 +17,15 @@ import {
   getUrls,
   type BatchMetrics,
   type BatchProgressEvent,
+  type BrowserSettings,
   type ProxyItem,
   type ProxyStrategy,
   type RequestMode,
   type RequestResult,
   type TargetUrl,
 } from "@/lib/api";
+
+import { ProxyList } from "@/components/proxy-list";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +72,7 @@ type Execution = {
 
   count: number;
   concurrency: number;
+  browserSettings: BrowserSettings;
 
   status: ExecutionStatus;
 
@@ -89,6 +93,18 @@ type TargetConfig = {
   proxyStrategy: ProxyStrategy;
   count: number;
   concurrency: number;
+  browserSettings: BrowserSettings;
+};
+
+const defaultBrowserSettings: BrowserSettings = {
+  show_browser: false,
+  delay_before_navigation_ms: 0,
+  wait_after_load_ms: 3000,
+  scroll_enabled: true,
+  scroll_amount: 800,
+  wait_after_scroll_ms: 2000,
+  delay_after_navigation_ms: 0,
+  navigation_timeout_ms: 30000,
 };
 
 const defaultTargetConfig: TargetConfig = {
@@ -98,6 +114,7 @@ const defaultTargetConfig: TargetConfig = {
   proxyStrategy: "round_robin",
   count: 10,
   concurrency: 2,
+  browserSettings: { ...defaultBrowserSettings },
 };
 
 const emptyMetrics: BatchMetrics = {
@@ -112,6 +129,8 @@ export function RequestDashboard() {
   const [proxies, setProxies] = useState<ProxyItem[]>([]);
 
   const [selectedUrlId, setSelectedUrlId] = useState("");
+
+  const [activeView, setActiveView] = useState<"requests" | "proxies">("requests");
 
   /**
    * Each URL has its own execution configuration.
@@ -257,6 +276,7 @@ export function RequestDashboard() {
       mode: RequestMode;
       count: number;
       concurrency: number;
+      browserSettings: BrowserSettings;
     },
   ) {
     const controller = new AbortController();
@@ -272,6 +292,7 @@ export function RequestDashboard() {
           mode: config.mode,
           count: config.count,
           concurrency: config.concurrency,
+          browser_settings: config.browserSettings,
         },
 
         (event: BatchProgressEvent) => {
@@ -440,6 +461,7 @@ export function RequestDashboard() {
 
       count: config.count,
       concurrency: config.concurrency,
+      browserSettings: { ...config.browserSettings },
 
       status: "running",
 
@@ -475,6 +497,7 @@ export function RequestDashboard() {
 
       count: config.count,
       concurrency: config.concurrency,
+      browserSettings: { ...config.browserSettings },
     });
   }
 
@@ -694,6 +717,32 @@ export function RequestDashboard() {
           </div>
         </header>
 
+        <div className="mb-5 flex items-center gap-2 rounded-xl border bg-card p-1">
+          <button
+            type="button"
+            onClick={() => setActiveView("requests")}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              activeView === "requests"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            Requests
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveView("proxies")}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              activeView === "proxies"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            Proxies
+          </button>
+        </div>
+
         {/* Error */}
 
         {error && (
@@ -710,7 +759,19 @@ export function RequestDashboard() {
           </div>
         )}
 
-        <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+        {activeView === "proxies" ? (
+          <section className="rounded-2xl border bg-card p-5">
+            <div className="mb-5">
+              <h2 className="text-lg font-semibold">Proxy Management</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add, edit, enable, disable, delete, and test proxy health.
+              </p>
+            </div>
+
+            <ProxyList initialProxies={proxies} />
+          </section>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
           {/* Sidebar */}
 
           <aside className="rounded-2xl border bg-card">
@@ -1094,6 +1155,299 @@ export function RequestDashboard() {
                     </div>
                   </div>
 
+                  {/* Browser Settings */}
+
+                  {(selectedConfig.mode === "browser" ||
+                    selectedConfig.mode === "random") && (
+                    <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          Browser Settings
+                        </p>
+
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          These settings belong to this target. HTTP requests
+                          ignore them.
+                        </p>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateSelectedConfig({
+                              browserSettings: {
+                                ...selectedConfig.browserSettings,
+                                show_browser:
+                                  !selectedConfig.browserSettings.show_browser,
+                              },
+                            })
+                          }
+                          className={`rounded-xl border p-3 text-left transition ${
+                            selectedConfig.browserSettings.show_browser
+                              ? "border-primary bg-background ring-1 ring-primary"
+                              : "bg-background hover:bg-muted"
+                          }`}
+                        >
+                          <p className="text-sm font-medium">
+                            Show Browser
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Open a visible Chrome window on the machine running
+                            the backend.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateSelectedConfig({
+                              browserSettings: {
+                                ...selectedConfig.browserSettings,
+                                scroll_enabled:
+                                  !selectedConfig.browserSettings.scroll_enabled,
+                              },
+                            })
+                          }
+                          className={`rounded-xl border p-3 text-left transition ${
+                            selectedConfig.browserSettings.scroll_enabled
+                              ? "border-primary bg-background ring-1 ring-primary"
+                              : "bg-background hover:bg-muted"
+                          }`}
+                        >
+                          <p className="text-sm font-medium">
+                            Scroll after load
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Scroll the page after the initial wait.
+                          </p>
+                        </button>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="delay-before-navigation">
+                            Before navigation
+                          </Label>
+
+                          <Input
+                            id="delay-before-navigation"
+                            type="number"
+                            min={0}
+                            max={60000}
+                            value={
+                              selectedConfig.browserSettings
+                                .delay_before_navigation_ms
+                            }
+                            onChange={(event) => {
+                              const value = Number(event.target.value);
+
+                              updateSelectedConfig({
+                                browserSettings: {
+                                  ...selectedConfig.browserSettings,
+                                  delay_before_navigation_ms:
+                                    Number.isFinite(value)
+                                      ? Math.min(60000, Math.max(0, value))
+                                      : 0,
+                                },
+                              });
+                            }}
+                          />
+
+                          <p className="text-xs text-muted-foreground">
+                            Milliseconds before opening the URL.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="wait-after-load">
+                            Wait after load
+                          </Label>
+
+                          <Input
+                            id="wait-after-load"
+                            type="number"
+                            min={0}
+                            max={60000}
+                            value={
+                              selectedConfig.browserSettings
+                                .wait_after_load_ms
+                            }
+                            onChange={(event) => {
+                              const value = Number(event.target.value);
+
+                              updateSelectedConfig({
+                                browserSettings: {
+                                  ...selectedConfig.browserSettings,
+                                  wait_after_load_ms:
+                                    Number.isFinite(value)
+                                      ? Math.min(60000, Math.max(0, value))
+                                      : 0,
+                                },
+                              });
+                            }}
+                          />
+
+                          <p className="text-xs text-muted-foreground">
+                            Wait after DOMContentLoaded.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="scroll-amount">
+                            Scroll amount
+                          </Label>
+
+                          <Input
+                            id="scroll-amount"
+                            type="number"
+                            min={0}
+                            max={10000}
+                            value={
+                              selectedConfig.browserSettings.scroll_amount
+                            }
+                            disabled={
+                              !selectedConfig.browserSettings.scroll_enabled
+                            }
+                            onChange={(event) => {
+                              const value = Number(event.target.value);
+
+                              updateSelectedConfig({
+                                browserSettings: {
+                                  ...selectedConfig.browserSettings,
+                                  scroll_amount: Number.isFinite(value)
+                                    ? Math.min(10000, Math.max(0, value))
+                                    : 0,
+                                },
+                              });
+                            }}
+                          />
+
+                          <p className="text-xs text-muted-foreground">
+                            Pixels to scroll vertically.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="wait-after-scroll">
+                            Wait after scroll
+                          </Label>
+
+                          <Input
+                            id="wait-after-scroll"
+                            type="number"
+                            min={0}
+                            max={60000}
+                            value={
+                              selectedConfig.browserSettings
+                                .wait_after_scroll_ms
+                            }
+                            disabled={
+                              !selectedConfig.browserSettings.scroll_enabled
+                            }
+                            onChange={(event) => {
+                              const value = Number(event.target.value);
+
+                              updateSelectedConfig({
+                                browserSettings: {
+                                  ...selectedConfig.browserSettings,
+                                  wait_after_scroll_ms:
+                                    Number.isFinite(value)
+                                      ? Math.min(60000, Math.max(0, value))
+                                      : 0,
+                                },
+                              });
+                            }}
+                          />
+
+                          <p className="text-xs text-muted-foreground">
+                            Wait after scrolling.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="delay-after-navigation">
+                            After navigation
+                          </Label>
+
+                          <Input
+                            id="delay-after-navigation"
+                            type="number"
+                            min={0}
+                            max={60000}
+                            value={
+                              selectedConfig.browserSettings
+                                .delay_after_navigation_ms
+                            }
+                            onChange={(event) => {
+                              const value = Number(event.target.value);
+
+                              updateSelectedConfig({
+                                browserSettings: {
+                                  ...selectedConfig.browserSettings,
+                                  delay_after_navigation_ms:
+                                    Number.isFinite(value)
+                                      ? Math.min(60000, Math.max(0, value))
+                                      : 0,
+                                },
+                              });
+                            }}
+                          />
+
+                          <p className="text-xs text-muted-foreground">
+                            Additional wait before closing the browser.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="navigation-timeout">
+                            Navigation timeout
+                          </Label>
+
+                          <Input
+                            id="navigation-timeout"
+                            type="number"
+                            min={1000}
+                            max={120000}
+                            value={
+                              selectedConfig.browserSettings
+                                .navigation_timeout_ms
+                            }
+                            onChange={(event) => {
+                              const value = Number(event.target.value);
+
+                              updateSelectedConfig({
+                                browserSettings: {
+                                  ...selectedConfig.browserSettings,
+                                  navigation_timeout_ms:
+                                    Number.isFinite(value)
+                                      ? Math.min(
+                                          120000,
+                                          Math.max(1000, value),
+                                        )
+                                      : 30000,
+                                },
+                              });
+                            }}
+                          />
+
+                          <p className="text-xs text-muted-foreground">
+                            Maximum time allowed for navigation.
+                          </p>
+                        </div>
+                      </div>
+
+                      {selectedConfig.browserSettings.show_browser &&
+                        selectedConfig.concurrency > 3 && (
+                          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700">
+                            Visible Browser with high concurrency can open
+                            multiple Chrome windows and consume significant
+                            CPU and RAM.
+                          </div>
+                        )}
+                    </div>
+                  )}
+
                   {/* Count / Concurrency */}
 
                   <div className="grid gap-4 md:grid-cols-2">
@@ -1476,7 +1830,8 @@ export function RequestDashboard() {
               )}
             </section>
           </main>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Add URL Modal */}

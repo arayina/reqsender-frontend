@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-import { deleteProxy, updateProxy, type ProxyItem } from "@/lib/api";
+import {
+  checkProxyHealth,
+  deleteProxy,
+  updateProxy,
+  type ProxyHealthResponse,
+  type ProxyItem,
+} from "@/lib/api";
 
 import { ProxyForm } from "@/components/proxy-form";
 
@@ -14,6 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
 import {
   Table,
   TableBody,
@@ -22,17 +29,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import { Badge } from "@/components/ui/badge";
 
 type Props = {
   initialProxies: ProxyItem[];
 };
 
+type HealthState = {
+  status: "idle" | "testing" | "healthy" | "unhealthy";
+  result?: ProxyHealthResponse;
+};
+
 export function ProxyList({ initialProxies }: Props) {
   const [proxies, setProxies] = useState(initialProxies);
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const [addOpen, setAddOpen] = useState(false);
+
   const [editingProxy, setEditingProxy] = useState<ProxyItem | null>(null);
+
+  const [healthStates, setHealthStates] = useState<Record<string, HealthState>>(
+    {},
+  );
+
   async function handleDelete(id: string) {
     setDeletingId(id);
 
@@ -40,8 +61,49 @@ export function ProxyList({ initialProxies }: Props) {
       await deleteProxy(id);
 
       setProxies((current) => current.filter((proxy) => proxy.id !== id));
+
+      setHealthStates((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleHealthCheck(proxy: ProxyItem) {
+    setHealthStates((current) => ({
+      ...current,
+      [proxy.id]: {
+        status: "testing",
+      },
+    }));
+
+    try {
+      const result = await checkProxyHealth(proxy.id);
+
+      setHealthStates((current) => ({
+        ...current,
+        [proxy.id]: {
+          status: result.healthy ? "healthy" : "unhealthy",
+          result,
+        },
+      }));
+    } catch (error) {
+      setHealthStates((current) => ({
+        ...current,
+        [proxy.id]: {
+          status: "unhealthy",
+          result: {
+            healthy: false,
+            status_code: null,
+            latency_ms: 0,
+            error:
+              error instanceof Error ? error.message : "Health check failed",
+          },
+        },
+      }));
     }
   }
 
@@ -58,7 +120,7 @@ export function ProxyList({ initialProxies }: Props) {
             + Add Proxy
           </DialogTrigger>
 
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-125">
             <DialogHeader>
               <DialogTitle>Add Proxy</DialogTitle>
             </DialogHeader>
@@ -69,6 +131,7 @@ export function ProxyList({ initialProxies }: Props) {
             />
           </DialogContent>
         </Dialog>
+
         <Dialog
           open={Boolean(editingProxy)}
           onOpenChange={(open) => {
@@ -77,7 +140,7 @@ export function ProxyList({ initialProxies }: Props) {
             }
           }}
         >
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-125">
             <DialogHeader>
               <DialogTitle>Edit Proxy</DialogTitle>
             </DialogHeader>
@@ -112,73 +175,113 @@ export function ProxyList({ initialProxies }: Props) {
               <TableHead>Protocol</TableHead>
               <TableHead>Username</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Health</TableHead>
               <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
-            {proxies.map((proxy) => (
-              <TableRow key={proxy.id}>
-                <TableCell>{proxy.host}</TableCell>
+            {proxies.map((proxy) => {
+              const health = healthStates[proxy.id];
 
-                <TableCell>{proxy.port}</TableCell>
+              return (
+                <TableRow key={proxy.id}>
+                  <TableCell>{proxy.host}</TableCell>
 
-                <TableCell className="uppercase">{proxy.protocol}</TableCell>
+                  <TableCell>{proxy.port}</TableCell>
 
-                <TableCell>{proxy.username || "-"}</TableCell>
+                  <TableCell className="uppercase">{proxy.protocol}</TableCell>
 
-                <TableCell>
-                  <Badge variant={proxy.enabled ? "default" : "secondary"}>
-                    {proxy.enabled ? "Active" : "Disabled"}
-                  </Badge>
-                </TableCell>
+                  <TableCell>{proxy.username || "-"}</TableCell>
 
-                <TableCell className="text-center">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingProxy(proxy);
-                      }}
-                    >
-                      Edit
-                    </Button>
+                  <TableCell>
+                    <Badge variant={proxy.enabled ? "default" : "secondary"}>
+                      {proxy.enabled ? "Active" : "Disabled"}
+                    </Badge>
+                  </TableCell>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        const updated = await updateProxy(proxy.id, {
-                          enabled: !proxy.enabled,
-                        });
+                  <TableCell>
+                    {!health || health.status === "idle" ? (
+                      <span className="text-muted-foreground">Not tested</span>
+                    ) : health.status === "testing" ? (
+                      <Badge variant="secondary">Checking...</Badge>
+                    ) : health.status === "healthy" ? (
+                      <div className="flex items-center gap-2">
+                        <Badge>Healthy</Badge>
 
-                        setProxies((current) =>
-                          current.map((item) =>
-                            item.id === updated.id ? updated : item,
-                          ),
-                        );
-                      }}
-                    >
-                      {proxy.enabled ? "Disable" : "Enable"}
-                    </Button>
+                        <span className="text-xs text-muted-foreground">
+                          {health.result?.latency_ms} ms
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <Badge variant="destructive">Unhealthy</Badge>
 
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={deletingId === proxy.id}
-                      onClick={() => handleDelete(proxy.id)}
-                    >
-                      {deletingId === proxy.id ? "Deleting..." : "Delete"}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                        {health.result?.error && (
+                          <div className="max-w-62.5 truncate text-xs text-muted-foreground">
+                            {health.result.error}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={health?.status === "testing"}
+                        onClick={() => handleHealthCheck(proxy)}
+                      >
+                        {health?.status === "testing" ? "Checking..." : "Test"}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingProxy(proxy);
+                        }}
+                      >
+                        Edit
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          const updated = await updateProxy(proxy.id, {
+                            enabled: !proxy.enabled,
+                          });
+
+                          setProxies((current) =>
+                            current.map((item) =>
+                              item.id === updated.id ? updated : item,
+                            ),
+                          );
+                        }}
+                      >
+                        {proxy.enabled ? "Disable" : "Enable"}
+                      </Button>
+
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={deletingId === proxy.id}
+                        onClick={() => handleDelete(proxy.id)}
+                      >
+                        {deletingId === proxy.id ? "Deleting..." : "Delete"}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
 
             {proxies.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No proxies found.
                 </TableCell>
               </TableRow>

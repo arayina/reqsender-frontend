@@ -13,6 +13,13 @@ export type ProxyItem = {
   enabled: boolean;
 };
 
+export type ProxyHealthResponse = {
+  healthy: boolean;
+  status_code: number | null;
+  latency_ms: number;
+  error: string | null;
+};
+
 export type ProxyCreate = {
   host: string;
   port: number;
@@ -67,6 +74,17 @@ export type BatchRequestResult = {
 
 export type ProxyStrategy = "fixed" | "round_robin" | "random";
 
+export type BrowserSettings = {
+  show_browser: boolean;
+  delay_before_navigation_ms: number;
+  wait_after_load_ms: number;
+  scroll_enabled: boolean;
+  scroll_amount: number;
+  wait_after_scroll_ms: number;
+  delay_after_navigation_ms: number;
+  navigation_timeout_ms: number;
+};
+
 export type BatchRequestExecution = {
   url: string;
   proxy_ids: string[];
@@ -74,6 +92,7 @@ export type BatchRequestExecution = {
   mode: RequestMode;
   count: number;
   concurrency: number;
+  browser_settings: BrowserSettings;
 };
 
 export type RequestResult = {
@@ -348,4 +367,20 @@ export async function executeBatchRequestStream(
   } finally {
     reader.releaseLock();
   }
+}
+
+export async function checkProxyHealth(
+  id: string,
+): Promise<ProxyHealthResponse> {
+  const response = await fetch(`${API_URL}/api/v1/proxies/${id}/health`, {
+    method: "POST",
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || "Proxy health check failed");
+  }
+
+  return result;
 }
