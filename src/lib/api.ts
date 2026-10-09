@@ -24,8 +24,8 @@ export type ProxyCreate = {
   host: string;
   port: number;
   protocol: string;
-  username?: string;
-  password?: string;
+  username?: string | null;
+  password?: string | null;
   enabled: boolean;
 };
 
@@ -33,8 +33,8 @@ export type ProxyUpdate = {
   host?: string;
   port?: number;
   protocol?: string;
-  username?: string;
-  password?: string;
+  username?: string | null;
+  password?: string | null;
   enabled?: boolean;
 };
 
