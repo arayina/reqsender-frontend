@@ -278,7 +278,7 @@ export function ExecutionAnalytics({
               <div key={item.url.id} className="space-y-2">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
+                    <p dir="auto" className="truncate text-sm font-medium">
                       {item.url.name || item.url.url}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
@@ -416,7 +416,7 @@ export function ExecutionAnalytics({
               {rows.map((row) => (
                 <tr key={`${row.target.id}-${row.proxy?.id ?? "direct"}-${row.mode}`} className="hover:bg-muted/20">
                   <td className="max-w-[280px] px-5 py-3">
-                    <p className="truncate font-medium">
+                    <p dir="auto" className="truncate font-medium">
                       {row.target.name || row.target.url}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
