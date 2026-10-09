@@ -135,6 +135,12 @@
   border-color: oklch(1 0 0 / 9%);
 }
 
+.dashboard-shell input,
+.dashboard-shell textarea,
+.dashboard-shell select {
+  font-family: var(--font-estedad), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
 .dashboard-shell input {
   background: oklch(0.145 0.012 260);
   border-color: oklch(1 0 0 / 11%);
