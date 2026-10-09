@@ -85,7 +85,6 @@ export type BrowserSettings = {
   navigation_timeout_ms: number;
 };
 
-
 export type TargetUrlSettings = {
   target_url_id: string;
   mode: RequestMode;
@@ -105,6 +104,7 @@ export type TargetUrlSettings = {
 };
 
 export type BatchRequestExecution = {
+  target_url_id: string;
   url: string;
   proxy_ids: string[];
   proxy_strategy: ProxyStrategy;
@@ -121,6 +121,33 @@ export type RequestResult = {
   final_url: string | null;
   title: string | null;
   error: string | null;
+};
+
+export type ExecutionSummary = {
+  total: number;
+  success: number;
+  failed: number;
+  success_rate: number;
+};
+
+export type ProxyExecutionSummary = {
+  proxy_id: string | null;
+  execution_mode: "http" | "browser";
+  total: number;
+  success: number;
+  failed: number;
+};
+
+export type ExecutionHistoryItem = {
+  id: string;
+  proxy_id: string | null;
+  execution_mode: "http" | "browser";
+  success: boolean;
+  status_code: number | null;
+  latency_ms: number;
+  final_url: string | null;
+  error: string | null;
+  created_at: string;
 };
 
 export async function getProxies(): Promise<ProxyItem[]> {
@@ -404,7 +431,6 @@ export async function checkProxyHealth(
   return result;
 }
 
-
 export async function getUrlSettings(): Promise<TargetUrlSettings[]> {
   const response = await fetch(`${API_URL}/api/v1/urls/settings`, {
     cache: "no-store",
@@ -436,4 +462,56 @@ export async function saveUrlSettings(
   }
 
   return result;
+}
+
+export async function getExecutionSummary(
+  targetUrlId: string,
+): Promise<ExecutionSummary> {
+  const response = await fetch(
+    `${API_URL}/api/v1/executions/urls/${targetUrlId}/summary`,
+    {
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch execution summary");
+  }
+
+  return response.json();
+}
+
+export async function getExecutionProxySummary(
+  targetUrlId: string,
+): Promise<ProxyExecutionSummary[]> {
+  const response = await fetch(
+    `${API_URL}/api/v1/executions/urls/${targetUrlId}/proxies`,
+    {
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch proxy execution summary");
+  }
+
+  return response.json();
+}
+
+export async function getExecutionHistory(
+  targetUrlId: string,
+  limit = 100,
+): Promise<ExecutionHistoryItem[]> {
+  const response = await fetch(
+    `${API_URL}/api/v1/executions/urls/${targetUrlId}/recent?limit=${limit}`,
+    {
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch execution history");
+  }
+
+  return response.json();
 }
