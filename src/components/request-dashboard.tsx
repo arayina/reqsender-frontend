@@ -28,6 +28,9 @@ import {
 } from "@/lib/api";
 
 import { ProxyList } from "@/components/proxy-list";
+import { AppHeader } from "@/components/dashboard/app-header";
+import { WorkspaceNav } from "@/components/dashboard/workspace-nav";
+import { DashboardError } from "@/components/dashboard/dashboard-error";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -757,102 +760,14 @@ export function RequestDashboard() {
   return (
     <div className="dashboard-shell">
       <div className="dashboard-frame flex min-h-screen flex-col px-4 py-4 md:px-6 md:py-5">
-        {/* App Header */}
+        <AppHeader
+          runningCount={executions.filter((item) => item.status === "running").length}
+          onRefresh={() => { void refreshData(); }}
+        />
 
-        <header className="mb-4 flex flex-col gap-4 rounded-2xl border bg-card/80 px-4 py-3 shadow-sm backdrop-blur md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/20">
-              <Zap className="size-5" />
-            </div>
+        <WorkspaceNav activeView={activeView} onViewChange={setActiveView} />
 
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold tracking-tight">
-                  Requester
-                </h1>
-
-                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-400">
-                  Console
-                </span>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                HTTP and browser execution workspace
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]" />
-              <span>System Online</span>
-              <span className="text-border">•</span>
-              <span className="font-medium text-foreground">
-                {executions.filter((item) => item.status === "running").length} running
-              </span>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-border/80 bg-background/50"
-              onClick={() => {
-                void refreshData();
-              }}
-            >
-              <RefreshCw />
-              Refresh
-            </Button>
-          </div>
-        </header>
-
-        <nav className="mb-5 flex flex-wrap items-center gap-1 rounded-xl border bg-card/70 p-1.5">
-          <button
-            type="button"
-            onClick={() => setActiveView("requests")}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              activeView === "requests"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            <Activity className="size-4" />
-            Execution Console
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveView("proxies")}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              activeView === "proxies"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            <Server className="size-4" />
-            Proxies
-          </button>
-
-          <span className="ml-auto hidden px-3 text-[11px] text-muted-foreground md:block">
-            Targets and executions are managed from the console
-          </span>
-        </nav>
-
-        {/* Error */}
-
-        {error && (
-          <div className="mb-5 flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-            <span>{error}</span>
-
-            <button
-              type="button"
-              onClick={() => setError("")}
-              className="rounded p-1 hover:bg-destructive/10"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        )}
+        <DashboardError message={error} onClose={() => setError("")} />
 
         {activeView === "proxies" ? (
           <section className="rounded-2xl border bg-card p-5">
