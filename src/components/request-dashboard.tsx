@@ -31,6 +31,8 @@ import { ProxyList } from "@/components/proxy-list";
 import { AppHeader } from "@/components/dashboard/app-header";
 import { WorkspaceNav } from "@/components/dashboard/workspace-nav";
 import { DashboardError } from "@/components/dashboard/dashboard-error";
+import { ExecutionAnalytics } from "@/components/dashboard/execution-analytics";
+import { ExecutionAnalytics } from "@/components/dashboard/execution-analytics";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,7 +137,7 @@ export function RequestDashboard() {
 
   const [selectedUrlId, setSelectedUrlId] = useState("");
 
-  const [activeView, setActiveView] = useState<"requests" | "proxies">(
+  const [activeView, setActiveView] = useState<"requests" | "analytics" | "proxies">(
     "requests",
   );
 
@@ -769,7 +771,9 @@ export function RequestDashboard() {
 
         <DashboardError message={error} onClose={() => setError("")} />
 
-        {activeView === "proxies" ? (
+        {activeView === "analytics" ? (
+          <ExecutionAnalytics urls={urls} proxies={proxies} />
+        ) : activeView === "proxies" ? (
           <section className="rounded-2xl border bg-card p-5">
             <div className="mb-5">
               <h2 className="text-lg font-semibold">Proxy Management</h2>
