@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Vazirmatn } from "next/font/google";
+import { Estedad, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,10 +12,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const vazirmatn = Vazirmatn({
-  variable: "--font-vazirmatn",
+const estedad = Estedad({
+  variable: "--font-estedad",
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         " " +
         geistMono.variable +
         " " +
-        vazirmatn.variable +
+        estedad.variable +
         " h-full antialiased"
       }
     >
