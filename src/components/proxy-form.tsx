@@ -22,7 +22,6 @@ export function ProxyForm({ proxy, onSaved, onCancel }: Props) {
   const [protocol, setProtocol] = useState(proxy?.protocol ?? "http");
   const [username, setUsername] = useState(proxy?.username ?? "");
   const [password, setPassword] = useState("");
-  const [clearPassword, setClearPassword] = useState(false);
   const [enabled, setEnabled] = useState(proxy?.enabled ?? true);
 
   const [loading, setLoading] = useState(false);
@@ -43,7 +42,7 @@ export function ProxyForm({ proxy, onSaved, onCancel }: Props) {
           port: Number(port),
           protocol,
           username: username.trim() || null,
-          ...(clearPassword ? { password: null } : password ? { password } : {}),
+          password: password.trim() || null,
           enabled,
         });
       } else {
@@ -132,28 +131,11 @@ export function ProxyForm({ proxy, onSaved, onCancel }: Props) {
           id="password"
           type="password"
           value={password}
-          onChange={(event) => {
-            setPassword(event.target.value);
-            if (event.target.value) setClearPassword(false);
-          }}
-          disabled={isEdit && clearPassword}
+          onChange={(event) => setPassword(event.target.value)}
           placeholder={
-            isEdit ? "Leave empty to keep current password" : "Optional"
+            isEdit ? "Leave empty to clear saved password" : "Optional"
           }
         />
-        {isEdit && (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={clearPassword}
-              onChange={(event) => {
-                setClearPassword(event.target.checked);
-                if (event.target.checked) setPassword("");
-              }}
-            />
-            Remove saved password
-          </label>
-        )}
       </div>
 
       <label className="flex items-center gap-2 text-sm">
