@@ -495,8 +495,8 @@ export function RequestDashboard() {
       return;
     }
 
-    if (config.count < 1 || config.count > 100) {
-      setError("Count must be between 1 and 100.");
+    if (config.count < 1 || config.count > 20000) {
+      setError("Count must be between 1 and 20000.");
       return;
     }
 
@@ -1465,7 +1465,7 @@ export function RequestDashboard() {
                           id="count"
                           type="number"
                           min={1}
-                          max={100}
+                          max={20000}
                           value={selectedConfig.count}
                           onChange={(event) => {
                             const value = Number(event.target.value);
@@ -1479,7 +1479,7 @@ export function RequestDashboard() {
                         />
 
                         <p className="text-xs text-muted-foreground">
-                          Maximum 100 requests per execution.
+                          Maximum 20000 requests per execution.
                         </p>
                       </div>
 
