@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Readex_Pro } from "next/font/google";
+import { Geist, Geist_Mono, Vazirmatn } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,8 +12,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const readexPro = Readex_Pro({
-  variable: "--font-readex-pro",
+const vazirmatn = Vazirmatn({
+  variable: "--font-vazirmatn",
   subsets: ["arabic", "latin"],
   weight: ["400", "500", "600", "700"],
 });
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         " " +
         geistMono.variable +
         " " +
-        readexPro.variable +
+        vazirmatn.variable +
         " h-full antialiased"
       }
     >
