@@ -76,25 +76,31 @@ export type ProxyStrategy = "fixed" | "round_robin" | "random";
 
 export type BrowserSettings = {
   show_browser: boolean;
-
   delay_before_navigation_ms: number;
-
   wait_after_load_ms: number;
-
-  wait_for_selector_enabled: boolean;
-
-  wait_for_selector: string | null;
-
-  wait_for_selector_timeout_ms: number;
-
   scroll_enabled: boolean;
-
   scroll_amount: number;
-
   wait_after_scroll_ms: number;
-
   delay_after_navigation_ms: number;
+  navigation_timeout_ms: number;
+};
 
+
+export type TargetUrlSettings = {
+  target_url_id: string;
+  mode: RequestMode;
+  connection: "direct" | "proxy";
+  proxy_strategy: ProxyStrategy;
+  proxy_ids: string[];
+  count: number;
+  concurrency: number;
+  show_browser: boolean;
+  delay_before_navigation_ms: number;
+  wait_after_load_ms: number;
+  scroll_enabled: boolean;
+  scroll_amount: number;
+  wait_after_scroll_ms: number;
+  delay_after_navigation_ms: number;
   navigation_timeout_ms: number;
 };
 
@@ -393,6 +399,40 @@ export async function checkProxyHealth(
 
   if (!response.ok) {
     throw new Error(result.detail || "Proxy health check failed");
+  }
+
+  return result;
+}
+
+
+export async function getUrlSettings(): Promise<TargetUrlSettings[]> {
+  const response = await fetch(`${API_URL}/api/v1/urls/settings`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch URL settings");
+  }
+
+  return response.json();
+}
+
+export async function saveUrlSettings(
+  id: string,
+  data: Omit<TargetUrlSettings, "target_url_id">,
+): Promise<TargetUrlSettings> {
+  const response = await fetch(`${API_URL}/api/v1/urls/${id}/settings`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || "Failed to save URL settings");
   }
 
   return result;
