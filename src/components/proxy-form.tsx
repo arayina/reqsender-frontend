@@ -22,6 +22,7 @@ export function ProxyForm({ proxy, onSaved, onCancel }: Props) {
   const [protocol, setProtocol] = useState(proxy?.protocol ?? "http");
   const [username, setUsername] = useState(proxy?.username ?? "");
   const [password, setPassword] = useState("");
+  const [clearPassword, setClearPassword] = useState(false);
   const [enabled, setEnabled] = useState(proxy?.enabled ?? true);
 
   const [loading, setLoading] = useState(false);
@@ -41,8 +42,8 @@ export function ProxyForm({ proxy, onSaved, onCancel }: Props) {
           host,
           port: Number(port),
           protocol,
-          username: username || undefined,
-          ...(password ? { password } : {}),
+          username: username.trim() || null,
+          ...(clearPassword ? { password: null } : password ? { password } : {}),
           enabled,
         });
       } else {
@@ -50,7 +51,7 @@ export function ProxyForm({ proxy, onSaved, onCancel }: Props) {
           host,
           port: Number(port),
           protocol,
-          username: username || undefined,
+          username: username.trim() || undefined,
           password: password || undefined,
           enabled,
         });
@@ -131,11 +132,28 @@ export function ProxyForm({ proxy, onSaved, onCancel }: Props) {
           id="password"
           type="password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            if (event.target.value) setClearPassword(false);
+          }}
+          disabled={isEdit && clearPassword}
           placeholder={
             isEdit ? "Leave empty to keep current password" : "Optional"
           }
         />
+        {isEdit && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={clearPassword}
+              onChange={(event) => {
+                setClearPassword(event.target.checked);
+                if (event.target.checked) setPassword("");
+              }}
+            />
+            Remove saved password
+          </label>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-sm">
