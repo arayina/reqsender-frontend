@@ -65,9 +65,12 @@ export type BatchRequestResult = {
   results: RequestResult[];
 };
 
+export type ProxyStrategy = "fixed" | "round_robin" | "random";
+
 export type BatchRequestExecution = {
   url: string;
-  proxy_id: string | null;
+  proxy_ids: string[];
+  proxy_strategy: ProxyStrategy;
   mode: RequestMode;
   count: number;
   concurrency: number;
@@ -263,6 +266,7 @@ export type BatchProgressEvent =
       total: number;
       success: number;
       failed: number;
+      proxy_id: string | null;
       result: RequestResult;
       metrics: BatchMetrics;
     }
