@@ -32,7 +32,6 @@ import { AppHeader } from "@/components/dashboard/app-header";
 import { WorkspaceNav } from "@/components/dashboard/workspace-nav";
 import { DashboardError } from "@/components/dashboard/dashboard-error";
 import { ExecutionAnalytics } from "@/components/dashboard/execution-analytics";
-import { ExecutionAnalytics } from "@/components/dashboard/execution-analytics";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,11 +47,9 @@ import {
   Pause,
   Play,
   Plus,
-  RefreshCw,
   Server,
   Trash2,
   X,
-  Zap,
 } from "lucide-react";
 
 type ExecutionStatus = "running" | "completed" | "cancelled" | "failed";
@@ -750,7 +747,7 @@ export function RequestDashboard() {
 
   if (loadingData) {
     return (
-      <div className="flex min-h-[500px] items-center justify-center">
+      <div className="flex min-h-125 items-center justify-center">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <Loader2 className="size-5 animate-spin" />
           Loading dashboard...
@@ -809,7 +806,7 @@ export function RequestDashboard() {
                 </div>
               </div>
 
-              <div className="max-h-[600px] space-y-1 overflow-y-auto p-2">
+              <div className="max-h-150 space-y-1 overflow-y-auto p-2">
                 {enabledUrls.map((urlItem) => {
                   const selected = urlItem.id === selectedUrlId;
 
@@ -1536,7 +1533,7 @@ export function RequestDashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex min-h-[420px] items-center justify-center p-8">
+                  <div className="flex min-h-105 items-center justify-center p-8">
                     <div className="text-center">
                       <Globe className="mx-auto mb-4 size-10 text-muted-foreground" />
 
