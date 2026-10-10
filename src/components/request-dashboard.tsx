@@ -1472,7 +1472,7 @@ export function RequestDashboard() {
 
                             updateSelectedConfig({
                               count: Number.isFinite(value)
-                                ? Math.min(100, Math.max(1, value))
+                                ? Math.min(20000, Math.max(1, value))
                                 : 1,
                             });
                           }}
