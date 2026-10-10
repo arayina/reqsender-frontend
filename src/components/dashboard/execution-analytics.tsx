@@ -258,8 +258,8 @@ export function ExecutionAnalytics({
         ))}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
-        <section className="rounded-2xl border bg-card p-5">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+        <section className="min-w-0 overflow-hidden rounded-2xl border bg-card p-5">
           <div className="mb-5">
             <h3 className="font-semibold">Target performance</h3>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -267,7 +267,7 @@ export function ExecutionAnalytics({
             </p>
           </div>
 
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
             {targetChart.length === 0 && (
               <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
                 No target URLs found.
@@ -275,13 +275,13 @@ export function ExecutionAnalytics({
             )}
 
             {targetChart.map((item) => (
-              <div key={item.url.id} className="space-y-2">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p dir="auto" className="truncate text-sm font-medium">
+              <div key={item.url.id} className="min-w-0 space-y-2">
+                <div className="flex min-w-0 items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <p dir="auto" className="truncate text-sm font-medium" title={item.url.name || item.url.url}>
                       {item.url.name || item.url.url}
                     </p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="truncate text-xs text-muted-foreground" title={item.url.url}>
                       {item.url.url}
                     </p>
                   </div>
