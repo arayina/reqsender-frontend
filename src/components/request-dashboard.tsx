@@ -406,6 +406,8 @@ export function RequestDashboard() {
               failed: event.failed,
               metrics: event.metrics,
 
+              // Keep only the latest 50 UI log entries. Aggregate metrics
+              // come from the stream event and remain independent of this list.
               results: [
                 ...execution.results,
                 {
@@ -413,7 +415,7 @@ export function RequestDashboard() {
                   proxyId: event.proxy_id,
                   result: event.result,
                 },
-              ],
+              ].slice(-50),
             }));
 
             return;
