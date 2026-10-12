@@ -30,6 +30,7 @@ type TargetAnalytics = {
 type AnalyticsRow = {
   target: TargetUrl;
   proxy: ProxyItem | null;
+  proxyId: string | null;
   mode: ProxyExecutionSummary["execution_mode"];
   total: number;
   success: number;
