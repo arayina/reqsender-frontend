@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getExecutionProxySummary,
   getExecutionSummary,
+  getDailyExecutionSummary,
+  type DailyExecutionSummary,
   type ExecutionSummary,
   type ProxyExecutionSummary,
   type ProxyItem,
@@ -55,6 +57,10 @@ export function ExecutionAnalytics({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [dailyDays, setDailyDays] = useState(7);
+  const [dailyItems, setDailyItems] = useState<DailyExecutionSummary[]>([]);
+  const [dailyLoading, setDailyLoading] = useState(true);
+  const [dailyError, setDailyError] = useState("");
 
   const proxyMap = useMemo(
     () => new Map(proxies.map((proxy) => [proxy.id, proxy])),
@@ -108,6 +114,28 @@ export function ExecutionAnalytics({
   useEffect(() => {
     void loadAnalytics();
   }, [loadAnalytics]);
+
+  const loadDailyAnalytics = useCallback(async () => {
+    setDailyLoading(true);
+    setDailyError("");
+
+    try {
+      const data = await getDailyExecutionSummary(dailyDays, "Asia/Tehran");
+      setDailyItems(data);
+    } catch (loadError) {
+      setDailyError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Failed to load daily request analytics",
+      );
+    } finally {
+      setDailyLoading(false);
+    }
+  }, [dailyDays]);
+
+  useEffect(() => {
+    void loadDailyAnalytics();
+  }, [loadDailyAnalytics]);
 
   const rows = useMemo<AnalyticsRow[]>(() => {
     return items.flatMap((item) =>
@@ -450,6 +478,163 @@ export function ExecutionAnalytics({
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="space-y-5 rounded-2xl border bg-card p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="font-semibold">Daily Request Analytics</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Daily request totals for each target URL, based on recorded executions.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: "Today", days: 1 },
+              { label: "7 days", days: 7 },
+              { label: "30 days", days: 30 },
+            ].map((option) => (
+              <Button
+                key={option.days}
+                type="button"
+                size="sm"
+                variant={dailyDays === option.days ? "default" : "outline"}
+                onClick={() => setDailyDays(option.days)}
+              >
+                {option.label}
+              </Button>
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void loadDailyAnalytics()}
+              disabled={dailyLoading}
+            >
+              <RefreshCw className={dailyLoading ? "animate-spin" : ""} />
+              Refresh
+            </Button>
+          </div>
+        </div>
+
+        {dailyError && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            {dailyError}
+          </div>
+        )}
+
+        {dailyLoading ? (
+          <div className="flex min-h-28 items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Loading daily request analytics...
+          </div>
+        ) : (
+          <>
+            {(() => {
+              const dailyTotals = new Map<string, number>();
+              for (const item of dailyItems) {
+                dailyTotals.set(
+                  item.date,
+                  (dailyTotals.get(item.date) ?? 0) + item.total,
+                );
+              }
+              const chartItems = [...dailyTotals.entries()].sort(([a], [b]) =>
+                a.localeCompare(b),
+              );
+              const maxDailyTotal = Math.max(
+                ...chartItems.map(([, total]) => total),
+                1,
+              );
+
+              return (
+                <div className="rounded-xl border p-4">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium">Requests per day</p>
+                    <p className="text-xs text-muted-foreground">Timezone: Asia/Tehran</p>
+                  </div>
+                  {chartItems.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      No recorded requests in this period.
+                    </p>
+                  ) : (
+                    <div className="flex min-h-40 items-end gap-2 overflow-x-auto pb-1">
+                      {chartItems.map(([date, total]) => (
+                        <div
+                          key={date}
+                          className="flex min-w-10 flex-1 flex-col items-center justify-end gap-2"
+                          title={`${date}: ${formatNumber(total)} requests`}
+                        >
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatNumber(total)}
+                          </span>
+                          <div
+                            className="w-full max-w-12 rounded-t-md bg-primary/80"
+                            style={{
+                              height: `${Math.max((total / maxDailyTotal) * 112, 4)}px`,
+                            }}
+                          />
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Intl.DateTimeFormat("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              timeZone: "UTC",
+                            }).format(new Date(`${date}T12:00:00Z`))}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <div className="overflow-x-auto rounded-xl border">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead className="border-b bg-muted/30 text-left text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Date</th>
+                    <th className="px-4 py-3 font-medium">Target URL</th>
+                    <th className="px-4 py-3 text-right font-medium">Total</th>
+                    <th className="px-4 py-3 text-right font-medium">Success</th>
+                    <th className="px-4 py-3 text-right font-medium">Failed</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {dailyItems.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        No daily request records found.
+                      </td>
+                    </tr>
+                  )}
+                  {[...dailyItems]
+                    .sort((a, b) => b.date.localeCompare(a.date) || (b.total - a.total))
+                    .map((item) => {
+                      const target = urls.find((url) => url.id === item.target_url_id);
+                      return (
+                        <tr key={`${item.date}-${item.target_url_id ?? "unassigned"}`} className="hover:bg-muted/20">
+                          <td className="whitespace-nowrap px-4 py-3">{item.date}</td>
+                          <td className="max-w-[360px] px-4 py-3">
+                            <p dir="auto" className="truncate font-medium" title={target?.url ?? "Target URL unavailable"}>
+                              {target?.name || target?.url || "Deleted or unassigned target"}
+                            </p>
+                            {target?.name && (
+                              <p dir="auto" className="truncate text-xs text-muted-foreground" title={target.url}>
+                                {target.url}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium">{formatNumber(item.total)}</td>
+                          <td className="px-4 py-3 text-right text-emerald-400">{formatNumber(item.success)}</td>
+                          <td className="px-4 py-3 text-right text-red-400">{formatNumber(item.failed)}</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </section>
     </section>
   );
