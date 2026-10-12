@@ -1341,7 +1341,7 @@ export function RequestDashboard() {
 
                           <div className="space-y-2">
                             <Label htmlFor="wait-after-scroll">
-                              Wait after scroll
+                              Scroll duration
                             </Label>
 
                             <Input
@@ -1371,7 +1371,7 @@ export function RequestDashboard() {
                             />
 
                             <p className="text-xs text-muted-foreground">
-                              Wait after scrolling.
+                              How long to keep scrolling continuously (milliseconds).
                             </p>
                           </div>
 
