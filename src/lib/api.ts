@@ -515,3 +515,32 @@ export async function getExecutionHistory(
 
   return response.json();
 }
+
+
+export type DailyExecutionSummary = {
+  date: string;
+  target_url_id: string | null;
+  total: number;
+  success: number;
+  failed: number;
+};
+
+export async function getDailyExecutionSummary(
+  days = 7,
+  timezone = "Asia/Tehran",
+): Promise<DailyExecutionSummary[]> {
+  const params = new URLSearchParams({
+    days: String(days),
+    timezone,
+  });
+  const response = await fetch(
+    `${API_URL}/api/v1/executions/daily?${params.toString()}`,
+    { cache: "no-store" },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch daily execution analytics");
+  }
+
+  return response.json();
+}
